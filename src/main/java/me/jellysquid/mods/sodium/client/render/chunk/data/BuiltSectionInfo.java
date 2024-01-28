@@ -1,8 +1,6 @@
 package me.jellysquid.mods.sodium.client.render.chunk.data;
 
-import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
-import it.unimi.dsi.fastutil.objects.ObjectSet;
 import me.jellysquid.mods.sodium.client.render.chunk.RenderSectionFlags;
 import me.jellysquid.mods.sodium.client.render.chunk.occlusion.VisibilityEncoding;
 import me.jellysquid.mods.sodium.client.render.chunk.terrain.TerrainRenderPass;
@@ -14,10 +12,7 @@ import net.minecraft.util.math.Direction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.function.IntFunction;
 
 /**
@@ -64,9 +59,9 @@ public class BuiltSectionInfo {
 
     public static class Builder {
         private final List<TerrainRenderPass> blockRenderPasses = new ArrayList<>();
-        private final IntArrayList globalBlockEntities = new IntArrayList();
-        private final IntArrayList culledBlockEntities = new IntArrayList();
-        private final ObjectSet<Sprite> animatedSprites = new ObjectOpenHashSet<>();
+        private final List<BlockEntity> globalBlockEntities = new ArrayList<>();
+        private final List<BlockEntity> culledBlockEntities = new ArrayList<>();
+        private final Set<Sprite> animatedSprites = new ObjectOpenHashSet<>();
 
         private ChunkOcclusionData occlusionData;
 
@@ -95,25 +90,11 @@ public class BuiltSectionInfo {
          * @param cull True if the block entity can be culled to this chunk render's volume, otherwise false
          */
         public void addBlockEntity(BlockEntity entity, boolean cull) {
-            (cull ? this.culledBlockEntities : this.globalBlockEntities).add((int) entity.getPos().asLong());
+            (cull ? this.culledBlockEntities : this.globalBlockEntities).add(entity);
         }
 
         public BuiltSectionInfo build() {
-            return new BuiltSectionInfo(this.blockRenderPasses, Arrays.asList(toBlockEntityArray(globalBlockEntities)), Arrays.asList(toBlockEntityArray(culledBlockEntities)), animatedSprites, occlusionData);
-        }
-
-        private BlockEntity[] toBlockEntityArray(IntArrayList entityIds) {
-            if (entityIds.isEmpty()) {
-                return null;
-            }
-
-            BlockEntity[] entities = new BlockEntity[entityIds.size()];
-
-            for (int i = 0; i < entityIds.size(); i++) {
-                entities[i] = WorldRenderer.getEntityFromPos(entityIds.get(i));
-            }
-
-            return entities;
+            return new BuiltSectionInfo(this.blockRenderPasses, this.globalBlockEntities, this.culledBlockEntities, this.animatedSprites, this.occlusionData);
         }
     }
 
