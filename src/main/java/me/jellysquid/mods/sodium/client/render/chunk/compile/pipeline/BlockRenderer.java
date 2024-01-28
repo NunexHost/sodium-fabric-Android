@@ -165,4 +165,6 @@ private LightMode getLightingMode(BlockState state, BakedModel model) {
         return LightMode.SMOOTH;
     } else {
         return LightMode.FLAT;
+        }
     }
+}
