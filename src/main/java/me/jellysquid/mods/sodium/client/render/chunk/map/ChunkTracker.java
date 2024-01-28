@@ -61,7 +61,7 @@ public class ChunkTracker implements ClientChunkEventListener {
     }
 
     private void updateNeighbors(int x, int z) {
-        int[] neighbors = new int[8];
+        long[] neighbors = new long[8];  // Changed to long[] for correct type
 
         for (int i = 0, idx = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
@@ -69,7 +69,7 @@ public class ChunkTracker implements ClientChunkEventListener {
             }
         }
 
-        this.updateMerged(neighbors);
+        this.updateMerged(neighbors);  // Now compatible with long[]
     }
 
     private void updateMerged(long[] neighbors) {
@@ -120,4 +120,4 @@ public class ChunkTracker implements ClientChunkEventListener {
     public interface ChunkEventHandler {
         void apply(int x, int z);
     }
-                    }
+}
