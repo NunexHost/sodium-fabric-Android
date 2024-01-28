@@ -8,19 +8,17 @@ import me.jellysquid.mods.sodium.client.util.iterator.ByteArrayIterator;
 import me.jellysquid.mods.sodium.client.render.chunk.region.RenderRegion;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.BitSet;
-
 public class ChunkRenderList {
     private final RenderRegion region;
 
-    private final BitSet sectionsWithGeometry = new BitSet(RenderRegion.REGION_SIZE);
-    private int sectionsWithGeometryCount;
+    private final byte[] sectionsWithGeometry = new byte[RenderRegion.REGION_SIZE];
+    private int sectionsWithGeometryCount = 0;
 
-    private final BitSet sectionsWithSprites = new BitSet(RenderRegion.REGION_SIZE);
-    private int sectionsWithSpritesCount;
+    private final byte[] sectionsWithSprites = new byte[RenderRegion.REGION_SIZE];
+    private int sectionsWithSpritesCount = 0;
 
-    private final BitSet sectionsWithEntities = new BitSet(RenderRegion.REGION_SIZE);
-    private int sectionsWithEntitiesCount;
+    private final byte[] sectionsWithEntities = new byte[RenderRegion.REGION_SIZE];
+    private int sectionsWithEntitiesCount = 0;
 
     private int size;
 
@@ -31,78 +29,79 @@ public class ChunkRenderList {
     }
 
     public void reset(int frame) {
-        sectionsWithGeometry.clear();
-        sectionsWithSprites.clear();
-        sectionsWithEntities.clear();
+        this.sectionsWithGeometryCount = 0;
+        this.sectionsWithSpritesCount = 0;
+        this.sectionsWithEntitiesCount = 0;
 
         this.size = 0;
         this.lastVisibleFrame = frame;
     }
 
     public void add(RenderSection render) {
-        if (size >= RenderRegion.REGION_SIZE) {
+        if (this.size >= RenderRegion.REGION_SIZE) {
             throw new ArrayIndexOutOfBoundsException("Render list is full");
         }
 
-        size++;
+        this.size++;
 
         int index = render.getSectionIndex();
         int flags = render.getFlags();
 
-        sectionsWithGeometry.set(index, (flags >>> RenderSectionFlags.HAS_BLOCK_GEOMETRY) != 0);
-        sectionsWithSprites.set(index, (flags >>> RenderSectionFlags.HAS_ANIMATED_SPRITES) != 0);
-        sectionsWithEntities.set(index, (flags >>> RenderSectionFlags.HAS_BLOCK_ENTITIES) != 0);
+        this.sectionsWithGeometry[this.sectionsWithGeometryCount] = (byte) index;
+        this.sectionsWithGeometryCount += (flags >>> RenderSectionFlags.HAS_BLOCK_GEOMETRY) & 1;
 
-        sectionsWithGeometryCount = sectionsWithGeometry.cardinality();
-        sectionsWithSpritesCount = sectionsWithSprites.cardinality();
-        sectionsWithEntitiesCount = sectionsWithEntities.cardinality();
+        this.sectionsWithSprites[this.sectionsWithSpritesCount] = (byte) index;
+        this.sectionsWithSpritesCount += (flags >>> RenderSectionFlags.HAS_ANIMATED_SPRITES) & 1;
+
+        this.sectionsWithEntities[this.sectionsWithEntitiesCount] = (byte) index;
+        this.sectionsWithEntitiesCount += (flags >>> RenderSectionFlags.HAS_BLOCK_ENTITIES) & 1;
     }
 
     public @Nullable ByteIterator sectionsWithGeometryIterator(boolean reverse) {
-        if (sectionsWithGeometryCount == 0) {
+        if (this.sectionsWithGeometryCount == 0) {
             return null;
         }
 
-        return new ReversibleByteArrayIterator(sectionsWithGeometry.toByteArray(), sectionsWithGeometryCount, reverse);
+        return new ReversibleByteArrayIterator(this.sectionsWithGeometry, this.sectionsWithGeometryCount, reverse);
     }
 
     public @Nullable ByteIterator sectionsWithSpritesIterator() {
-        if (sectionsWithSpritesCount == 0) {
+        if (this.sectionsWithSpritesCount == 0) {
             return null;
         }
 
-        return new ByteArrayIterator(sectionsWithSprites.toByteArray(), sectionsWithSpritesCount);
+        return new ByteArrayIterator(this.sectionsWithSprites, this.sectionsWithSpritesCount);
     }
 
     public @Nullable ByteIterator sectionsWithEntitiesIterator() {
-        if (sectionsWithEntitiesCount == 0) {
+        if (this.sectionsWithEntitiesCount == 0) {
             return null;
         }
 
-        return new ByteArrayIterator(sectionsWithEntities.toByteArray(), sectionsWithEntitiesCount);
+        return new ByteArrayIterator(this.sectionsWithEntities, this.sectionsWithEntitiesCount);
     }
 
     public int getSectionsWithGeometryCount() {
-        return sectionsWithGeometryCount;
+        return this.sectionsWithGeometryCount;
     }
 
     public int getSectionsWithSpritesCount() {
-        return sectionsWithSpritesCount;
+        return this.sectionsWithSpritesCount;
     }
 
     public int getSectionsWithEntitiesCount() {
-        return sectionsWithEntitiesCount;
+        return this.sectionsWithEntitiesCount;
     }
 
     public int getLastVisibleFrame() {
-        return lastVisibleFrame;
+        return this.lastVisibleFrame;
     }
 
     public RenderRegion getRegion() {
-        return region;
+        return this.region;
     }
 
     public int size() {
-        return size;
+        return this.size;
     }
 }
