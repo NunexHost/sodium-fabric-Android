@@ -18,8 +18,8 @@ public class BlockOcclusionCache {
     private static final int ENTRY_FALSE = 0;
     private static final int ENTRY_TRUE = 1;
 
-
     private final Object2IntLinkedOpenCustomHashMap<ShapeComparison> comparisonLookupTable;
+
     private final ShapeComparison cachedComparisonObject = new ShapeComparison();
     private final BlockPos.Mutable cachedPositionObject = new BlockPos.Mutable();
 
