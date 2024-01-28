@@ -54,14 +54,14 @@ public class BlockRenderer {
     }
 
     public void renderModel(BlockRenderContext ctx, ChunkBuildBuffers buffers) {
-        var material = DefaultMaterials.forBlockState(ctx.state());
-        var meshBuilder = buffers.get(material);
+        Material material = DefaultMaterials.forBlockState(ctx.state());
+        ChunkModelBuilder meshBuilder = buffers.get(material);
 
         ColorProvider<BlockState> colorizer = this.colorProviderRegistry.getColorProvider(ctx.state().getBlock());
 
         LightPipeline lighter = this.lighters.getLighter(this.getLightingMode(ctx.state(), ctx.model()));
         Vec3d renderOffset;
-        
+
         if (ctx.state().hasModelOffset()) {
             renderOffset = ctx.state().getModelOffset(ctx.world(), ctx.pos());
         } else {
@@ -84,94 +84,87 @@ public class BlockRenderer {
     }
 
     private List<BakedQuad> getGeometry(BlockRenderContext ctx, Direction face) {
-        var random = this.random;
-        random.setSeed(ctx.seed());
+    Random random = this.random;
+    random.setSeed(ctx.seed());
 
-        return ctx.model().getQuads(ctx.state(), face, random);
-    }
+    return ctx.model().getQuads(ctx.state(), face, random);
+}
 
-    private boolean isFaceVisible(BlockRenderContext ctx, Direction face) {
-        return this.occlusionCache.shouldDrawSide(ctx.state(), ctx.world(), ctx.pos(), face);
-    }
+private boolean isFaceVisible(BlockRenderContext ctx, Direction face) {
+    return this.occlusionCache.shouldDrawSide(ctx.state(), ctx.world(), ctx.pos(), face);
+}
 
-    private void renderQuadList(BlockRenderContext ctx, Material material, LightPipeline lighter, ColorProvider<BlockState> colorizer, Vec3d offset,
-                                ChunkModelBuilder builder, List<BakedQuad> quads, Direction cullFace) {
+private void renderQuadList(BlockRenderContext ctx, Material material, LightPipeline lighter, ColorProvider<BlockState> colorizer, Vec3d offset,
+                           ChunkModelBuilder builder, List<BakedQuad> quads, Direction cullFace) {
 
-        // This is a very hot allocation, iterate over it manually
-        // noinspection ForLoopReplaceableByForEach
-        for (int i = 0, quadsSize = quads.size(); i < quadsSize; i++) {
-            BakedQuadView quad = (BakedQuadView) quads.get(i);
+    // Otimização: Reutilizar QuadLightData e evitar alocação
+    QuadLightData light = this.quadLightData;
 
-            final var lightData = this.getVertexLight(ctx, lighter, cullFace, quad);
-            final var vertexColors = this.getVertexColors(ctx, colorizer, quad);
+    // Otimização: Loop manual para evitar iteração desnecessária
+    for (int i = 0, quadsSize = quads.size(); i < quadsSize; i++) {
+        BakedQuadView quad = (BakedQuadView) quads.get(i);
 
-            this.writeGeometry(ctx, builder, offset, material, quad, vertexColors, lightData);
-
-            Sprite sprite = quad.getSprite();
-
-            if (sprite != null) {
-                builder.addSprite(sprite);
-            }
-        }
-    }
-
-    private QuadLightData getVertexLight(BlockRenderContext ctx, LightPipeline lighter, Direction cullFace, BakedQuadView quad) {
-        QuadLightData light = this.quadLightData;
         lighter.calculate(quad, ctx.pos(), light, cullFace, quad.getLightFace(), quad.hasShade());
 
-        return light;
-    }
+        int[] vertexColors = this.getVertexColors(ctx, colorizer, quad);
 
-    private int[] getVertexColors(BlockRenderContext ctx, ColorProvider<BlockState> colorProvider, BakedQuadView quad) {
-        final int[] vertexColors = this.quadColors;
+        this.writeGeometry(ctx, builder, offset, material, quad, vertexColors, light);
 
-        if (colorProvider != null && quad.hasColor()) {
-            colorProvider.getColors(ctx.world(), ctx.pos(), ctx.state(), quad, vertexColors);
-        } else {
-            Arrays.fill(vertexColors, 0xFFFFFFFF);
-        }
+        Sprite sprite = quad.getSprite();
 
-        return vertexColors;
-    }
-
-    private void writeGeometry(BlockRenderContext ctx,
-                               ChunkModelBuilder builder,
-                               Vec3d offset,
-                               Material material,
-                               BakedQuadView quad,
-                               int[] colors,
-                               QuadLightData light)
-    {
-        ModelQuadOrientation orientation = ModelQuadOrientation.orientByBrightness(light.br, light.lm);
-        var vertices = this.vertices;
-
-        ModelQuadFacing normalFace = quad.getNormalFace();
-
-        for (int dstIndex = 0; dstIndex < 4; dstIndex++) {
-            int srcIndex = orientation.getVertexIndex(dstIndex);
-
-            var out = vertices[dstIndex];
-            out.x = ctx.origin().x() + quad.getX(srcIndex) + (float) offset.getX();
-            out.y = ctx.origin().y() + quad.getY(srcIndex) + (float) offset.getY();
-            out.z = ctx.origin().z() + quad.getZ(srcIndex) + (float) offset.getZ();
-
-            out.color = ColorABGR.withAlpha(colors != null ? colors[srcIndex] : 0xFFFFFFFF, light.br[srcIndex]);
-
-            out.u = quad.getTexU(srcIndex);
-            out.v = quad.getTexV(srcIndex);
-
-            out.light = light.lm[srcIndex];
-        }
-
-        var vertexBuffer = builder.getVertexBuffer(normalFace);
-        vertexBuffer.push(vertices, material);
-    }
-
-    private LightMode getLightingMode(BlockState state, BakedModel model) {
-        if (this.useAmbientOcclusion && model.useAmbientOcclusion() && state.getLuminance() == 0) {
-            return LightMode.SMOOTH;
-        } else {
-            return LightMode.FLAT;
+        if (sprite != null) {
+            builder.addSprite(sprite);
         }
     }
 }
+
+private int[] getVertexColors(BlockRenderContext ctx, ColorProvider<BlockState> colorProvider, BakedQuadView quad) {
+    final int[] vertexColors = this.quadColors;
+
+    if (colorProvider != null && quad.hasColor()) {
+        colorProvider.getColors(ctx.world(), ctx.pos(), ctx.state(), quad, vertexColors);
+    } else {
+        Arrays.fill(vertexColors, 0xFFFFFFFF);
+    }
+
+    return vertexColors;
+}
+
+private void writeGeometry(BlockRenderContext ctx,
+                           ChunkModelBuilder builder,
+                           Vec3d offset,
+                           Material material,
+                           BakedQuadView quad,
+                           int[] colors,
+                           QuadLightData light) {
+    ModelQuadOrientation orientation = ModelQuadOrientation.orientByBrightness(light.br, light.lm);
+    ChunkVertexEncoder.Vertex[] vertices = this.vertices;
+
+    ModelQuadFacing normalFace = quad.getNormalFace();
+
+    for (int dstIndex = 0; dstIndex < 4; dstIndex++) {
+        int srcIndex = orientation.getVertexIndex(dstIndex);
+
+        vertices[dstIndex].x = ctx.origin().x() + quad.getX(srcIndex) + (float) offset.getX();
+        vertices[dstIndex].y = ctx.origin().y() + quad.getY(srcIndex) + (float) offset.getY();
+        vertices[dstIndex].z = ctx.origin().z() + quad.getZ(srcIndex) + (float) offset.getZ();
+
+        vertices[dstIndex].color = ColorABGR.withAlpha(colors != null ? colors[srcIndex] : 0xFFFFFFFF, light.br[srcIndex]);
+
+        vertices[dstIndex].u = quad.getTexU(srcIndex);
+        vertices[dstIndex].v = quad.getTexV(srcIndex);
+
+        vertices[dstIndex].light = light.lm[srcIndex];
+    }
+
+    builder.getVertexBuffer(normalFace).push(vertices, material);
+}
+
+private LightMode getLightingMode(BlockState state, BakedModel model) {
+    if (this.useAmbientOcclusion && model.useAmbientOcclusion() && state.getLuminance() == 0) {
+        return LightMode.SMOOTH;
+    } else {
+        return LightMode.FLAT;
+    }
+}
+    
