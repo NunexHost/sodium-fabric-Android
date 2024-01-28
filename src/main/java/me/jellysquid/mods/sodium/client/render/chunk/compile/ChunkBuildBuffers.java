@@ -19,23 +19,25 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A collection of temporary buffers for each worker thread which will be used to build chunk meshes for given render
- * passes. This makes a best-effort attempt to pick a suitable size for each scratch buffer, but will never try to
- * shrink a buffer.
+ * Uma coleção de buffers temporários para cada thread de trabalho que serão usados para construir malhas de chunk para
+ * renderizações passadas. Isso faz uma tentativa de melhor esforço para escolher um tamanho adequado para cada buffer de
+ * rascunho, mas nunca tentará reduzir um buffer.
  */
 public class ChunkBuildBuffers {
     private final Reference2ReferenceOpenHashMap<TerrainRenderPass, BakedChunkModelBuilder> builders = new Reference2ReferenceOpenHashMap<>();
 
     private final ChunkVertexType vertexType;
+    private final int initialBufferSize;
 
     public ChunkBuildBuffers(ChunkVertexType vertexType) {
         this.vertexType = vertexType;
+        this.initialBufferSize = 128 * 1024;
 
         for (TerrainRenderPass pass : DefaultTerrainRenderPasses.ALL) {
             var vertexBuffers = new ChunkMeshBufferBuilder[ModelQuadFacing.COUNT];
 
             for (int facing = 0; facing < ModelQuadFacing.COUNT; facing++) {
-                vertexBuffers[facing] = new ChunkMeshBufferBuilder(this.vertexType, 128 * 1024);
+                vertexBuffers[facing] = new ChunkMeshBufferBuilder(this.vertexType, initialBufferSize);
             }
 
             this.builders.put(pass, new BakedChunkModelBuilder(vertexBuffers));
@@ -53,9 +55,9 @@ public class ChunkBuildBuffers {
     }
 
     /**
-     * Creates immutable baked chunk meshes from all non-empty scratch buffers. This is used after all blocks
-     * have been rendered to pass the finished meshes over to the graphics card. This function can be called multiple
-     * times to return multiple copies.
+     * Cria malhas de chunk assadas imutáveis a partir de todos os buffers de rascunho não vazios. Isso é usado após
+     * todos os blocos terem sido renderizados para passar as malhas finalizadas para a placa gráfica. Esta função pode
+     * ser chamada várias vezes para retornar várias cópias.
      */
     public BuiltSectionMeshParts createMesh(TerrainRenderPass pass) {
         var builder = this.builders.get(pass);
@@ -100,3 +102,5 @@ public class ChunkBuildBuffers {
         }
     }
 }
+
+            
