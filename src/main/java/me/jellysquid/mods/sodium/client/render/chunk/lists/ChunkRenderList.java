@@ -49,9 +49,9 @@ public class ChunkRenderList {
         int index = render.getSectionIndex();
         int flags = render.getFlags();
 
-        sectionsWithGeometry.set(index, (flags >>> RenderSectionFlags.HAS_BLOCK_GEOMETRY) & 1 == 1);
-        sectionsWithSprites.set(index, (flags >>> RenderSectionFlags.HAS_ANIMATED_SPRITES) & 1 == 1);
-        sectionsWithEntities.set(index, (flags >>> RenderSectionFlags.HAS_BLOCK_ENTITIES) & 1 == 1);
+        sectionsWithGeometry.set(index, (flags >>> RenderSectionFlags.HAS_BLOCK_GEOMETRY) & 1 != 0);
+        sectionsWithSprites.set(index, (flags >>> RenderSectionFlags.HAS_ANIMATED_SPRITES) & 1 != 0);
+        sectionsWithEntities.set(index, (flags >>> RenderSectionFlags.HAS_BLOCK_ENTITIES) & 1 != 0);
 
         sectionsWithGeometryCount = sectionsWithGeometry.cardinality();
         sectionsWithSpritesCount = sectionsWithSprites.cardinality();
