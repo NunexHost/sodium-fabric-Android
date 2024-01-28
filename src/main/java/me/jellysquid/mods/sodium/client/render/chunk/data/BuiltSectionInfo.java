@@ -95,11 +95,11 @@ public class BuiltSectionInfo {
          * @param cull True if the block entity can be culled to this chunk render's volume, otherwise false
          */
         public void addBlockEntity(BlockEntity entity, boolean cull) {
-            (cull ? this.culledBlockEntities : this.globalBlockEntities).add(entity.getPos().asLong());
+            (cull ? this.culledBlockEntities : this.globalBlockEntities).add((int) entity.getPos().asLong());
         }
 
         public BuiltSectionInfo build() {
-            return new BuiltSectionInfo(this.blockRenderPasses, toBlockEntityArray(globalBlockEntities), toBlockEntityArray(culledBlockEntities), animatedSprites, occlusionData);
+            return new BuiltSectionInfo(this.blockRenderPasses, Arrays.asList(toBlockEntityArray(globalBlockEntities)), Arrays.asList(toBlockEntityArray(culledBlockEntities)), animatedSprites, occlusionData);
         }
 
         private BlockEntity[] toBlockEntityArray(IntArrayList entityIds) {
