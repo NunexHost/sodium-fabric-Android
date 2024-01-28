@@ -26,10 +26,10 @@ public class ChunkTracker implements ClientChunkEventListener {
 
     @Override
     public void onChunkStatusAdded(int x, int z, int flags) {
-        var key = ChunkPos.toLong(x, z);
+        long key = ChunkPos.toLong(x, z);
 
-        var prev = this.chunkStatus.get(key);
-        var cur = prev | flags;
+        int prev = this.chunkStatus.get(key);
+        int cur = prev | flags;
 
         if (prev == cur) {
             return;
@@ -42,9 +42,9 @@ public class ChunkTracker implements ClientChunkEventListener {
 
     @Override
     public void onChunkStatusRemoved(int x, int z, int flags) {
-        var key = ChunkPos.toLong(x, z);
+        long key = ChunkPos.toLong(x, z);
 
-        var prev = this.chunkStatus.get(key);
+        int prev = this.chunkStatus.get(key);
         int cur = prev & ~flags;
 
         if (prev == cur) {
@@ -61,31 +61,35 @@ public class ChunkTracker implements ClientChunkEventListener {
     }
 
     private void updateNeighbors(int x, int z) {
-        for (int ox = -1; ox <= 1; ox++) {
-            for (int oz = -1; oz <= 1; oz++) {
-                this.updateMerged(ox + x, oz + z);
+        int[] neighbors = new int[8];
+
+        for (int i = 0, idx = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                neighbors[idx++] = ChunkPos.toLong(x + i - 1, z + j - 1);
             }
         }
+
+        this.updateMerged(neighbors);
     }
 
-    private void updateMerged(int x, int z) {
-        long key = ChunkPos.toLong(x, z);
+    private void updateMerged(int[] neighbors) {
+        for (int i = 0; i < 8; i++) {
+            long key = neighbors[i];
 
-        int flags = this.chunkStatus.get(key);
+            int flags = this.chunkStatus.get(key);
 
-        for (int ox = -1; ox <= 1; ox++) {
-            for (int oz = -1; oz <= 1; oz++) {
-                flags &= this.chunkStatus.get(ChunkPos.toLong(ox + x, oz + z));
+            for (int j = 0; j < 8; j++) {
+                flags &= this.chunkStatus.get(neighbors[j]);
             }
-        }
 
-        if (flags == ChunkStatus.FLAG_ALL) {
-            if (this.chunkReady.add(key) && !this.unloadQueue.remove(key)) {
-                this.loadQueue.add(key);
-            }
-        } else {
-            if (this.chunkReady.remove(key) && !this.loadQueue.remove(key)) {
-                this.unloadQueue.add(key);
+            if (flags == ChunkStatus.FLAG_ALL) {
+                if (this.chunkReady.add(key) && !this.unloadQueue.remove(key)) {
+                    this.loadQueue.add(key);
+                }
+            } else {
+                if (this.chunkReady.remove(key) && !this.loadQueue.remove(key)) {
+                    this.unloadQueue.add(key);
+                }
             }
         }
     }
