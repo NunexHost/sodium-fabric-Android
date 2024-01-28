@@ -26,10 +26,10 @@ public class ChunkTracker implements ClientChunkEventListener {
 
     @Override
     public void onChunkStatusAdded(int x, int z, int flags) {
-        long key = ChunkPos.toLong(x, z);
+        var key = ChunkPos.toLong(x, z);
 
-        int prev = this.chunkStatus.get(key);
-        int cur = prev | flags;
+        var prev = this.chunkStatus.get(key);
+        var cur = prev | flags;
 
         if (prev == cur) {
             return;
@@ -42,9 +42,9 @@ public class ChunkTracker implements ClientChunkEventListener {
 
     @Override
     public void onChunkStatusRemoved(int x, int z, int flags) {
-        long key = ChunkPos.toLong(x, z);
+        var key = ChunkPos.toLong(x, z);
 
-        int prev = this.chunkStatus.get(key);
+        var prev = this.chunkStatus.get(key);
         int cur = prev & ~flags;
 
         if (prev == cur) {
@@ -61,33 +61,31 @@ public class ChunkTracker implements ClientChunkEventListener {
     }
 
     private void updateNeighbors(int x, int z) {
-        long[] neighbors = new long[8];  // Changed to long[] for correct type
+        for (int ox = -1; ox <= 1; ox++) {
+            for (int oz = -1; oz <= 1; oz++) {
+                this.updateMerged(ox + x, oz + z);
+            }
+        }
+    }
 
-        for (int i = 0, idx = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                neighbors[idx++] = ChunkPos.toLong(x + i - 1, z + j - 1);
+    private void updateMerged(int x, int z) {
+        long key = ChunkPos.toLong(x, z);
+
+        int flags = this.chunkStatus.get(key);
+
+        for (int ox = -1; ox <= 1; ox++) {
+            for (int oz = -1; oz <= 1; oz++) {
+                flags &= this.chunkStatus.get(ChunkPos.toLong(ox + x, oz + z));
             }
         }
 
-        this.updateMerged(neighbors);  // Now compatible with long[]
-    }
-
-    private void updateMerged(long[] neighbors) {
-        for (long key : neighbors) {
-            int flags = this.chunkStatus.get(key);
-
-            for (long neighbor : neighbors) {
-                flags &= this.chunkStatus.get(neighbor);
+        if (flags == ChunkStatus.FLAG_ALL) {
+            if (this.chunkReady.add(key) && !this.unloadQueue.remove(key)) {
+                this.loadQueue.add(key);
             }
-
-            if (flags == ChunkStatus.FLAG_ALL) {
-                if (this.chunkReady.add(key) && !this.unloadQueue.remove(key)) {
-                    this.loadQueue.add(key);
-                }
-            } else {
-                if (this.chunkReady.remove(key) && !this.loadQueue.remove(key)) {
-                    this.unloadQueue.add(key);
-                }
+        } else {
+            if (this.chunkReady.remove(key) && !this.loadQueue.remove(key)) {
+                this.unloadQueue.add(key);
             }
         }
     }
