@@ -72,14 +72,12 @@ public class ChunkTracker implements ClientChunkEventListener {
         this.updateMerged(neighbors);
     }
 
-    private void updateMerged(int[] neighbors) {
-        for (int i = 0; i < 8; i++) {
-            long key = neighbors[i];
-
+    private void updateMerged(long[] neighbors) {
+        for (long key : neighbors) {
             int flags = this.chunkStatus.get(key);
 
-            for (int j = 0; j < 8; j++) {
-                flags &= this.chunkStatus.get(neighbors[j]);
+            for (long neighbor : neighbors) {
+                flags &= this.chunkStatus.get(neighbor);
             }
 
             if (flags == ChunkStatus.FLAG_ALL) {
@@ -122,4 +120,4 @@ public class ChunkTracker implements ClientChunkEventListener {
     public interface ChunkEventHandler {
         void apply(int x, int z);
     }
-}
+                    }
