@@ -57,3 +57,4 @@ public class BlockRenderCache {
     public void cleanup() {
         this.worldSlice.reset();
     }
+}
